@@ -2,6 +2,11 @@
 
 Two versions of Ichi in one repository.
 
+| V1 - Ichi Original | V2 - Ichi 2 |
+| :---: | :---: |
+| <img src="v1/assets/boss-fight.jpg" alt="Ichi Original fighting the boss" width="400"> | <img src="v2/assets/run.jpg" alt="Ichi 2 running through Moonlit Shrine" width="400"> |
+| Boss encounter in the pixel-art original | A regular run through Moonlit Shrine |
+
 | Folder | Game |
 | --- | --- |
 | `v1/` | Ichi Original, the original pixel-art HTML and Canvas game |
