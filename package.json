@@ -1,0 +1,9 @@
+{
+  "name": "ichi-runer",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The original pixel-art Ichi and the full 3D Ichi 2",
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node server.cjs", "test": "node --test tests/server.test.cjs" }
+}

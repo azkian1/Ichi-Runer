@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.local/
+.agents/
+.codex/
+.remix/
+*.log
+*.map
+*.pem
+*.key
+*.p12
+*.pfx
+.DS_Store
+Thumbs.db
