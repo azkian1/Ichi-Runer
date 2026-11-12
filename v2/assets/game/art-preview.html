@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ichi — Models and Effects Preview</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#080f19;color:#e2dfd2;font-family:Manrope,Arial,sans-serif}canvas{display:block;width:100vw;height:100dvh;touch-action:none}header{position:absolute;left:24px;top:20px;right:24px;pointer-events:none}h1{font-size:18px;font-weight:600;margin:0 0 8px}header p{font-size:11px;color:#9eaeb9;margin:0;line-height:1.7}.controls{position:absolute;left:20px;right:20px;bottom:22px;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}button,a{font:inherit;font-size:12px;color:#deded3;background:#121e2be8;border:1px solid #77899655;border-radius:4px;padding:11px 16px;cursor:pointer;text-decoration:none}button:hover,button:focus-visible{border-color:#d5bb7e;outline:0}button[aria-pressed="true"]{color:#f3d49c;border-color:#c5a367;background:#322d27e8}.status{position:absolute;left:24px;bottom:91px;color:#a8bcc6;font-size:11px;pointer-events:none}.legend{position:absolute;top:90px;right:24px;text-align:right;font-size:10px;line-height:1.8;color:#a2b4c3;pointer-events:none}#metrics{font-size:9px;color:#647b8b}#error{position:absolute;top:140px;left:24px;color:#ff9f9f;font-size:12px;max-width:440px}.badge{font-size:9px;letter-spacing:.15em;color:#d1b67e;margin-bottom:9px}@media(max-width:600px){h1{font-size:15px}header{left:18px;top:16px}.legend{top:116px;right:18px}.controls{left:12px;right:12px;gap:6px;bottom:14px}button,a{padding:10px 12px;font-size:10px}.status{left:18px;bottom:104px}header p{max-width:285px;font-size:10px}}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Ichi and demon model scene"></canvas>
+<header><div class="badge">ICHI’S BLADE · VISUAL PREVIEW</div><h1>Models and Effects Preview</h1><p>Separate scene · your active school is unchanged</p></header>
+<div class="legend">Ichi on the left · demon on the right<br>Drag to rotate · scroll to zoom<div id="metrics"></div></div>
+<div id="error"></div><div class="status" id="status">Choose a school to preview its effect, or inspect the models</div>
+<nav class="controls" aria-label="School effects preview">
+<button data-school="lightning" aria-pressed="false">Lightning</button><button data-school="water" aria-pressed="false">Water</button><button data-school="fire" aria-pressed="false">Fire</button><button data-school="wind" aria-pressed="false">Wind</button><button data-school="darkness" aria-pressed="false">Darkness</button><button id="showModels">Models</button><a href="/">Back to the game</a>
+</nav>
+<script type="module">
+import * as THREE from '../three.module.min.js';
+import {createActors} from './actors.js';
+import {createCourseAssets} from './course.js';
+import {createElementFinishers} from './finishers.js';
+const canvas=document.getElementById('scene'),status=document.getElementById('status');
+window.addEventListener('error',event=>{document.getElementById('error').textContent='Scene error: '+event.message;});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1421);scene.fog=new THREE.Fog(0x152a3b,12,32);
+const camera=new THREE.PerspectiveCamera(43,1,.1,60);camera.position.set(4,3,7);camera.lookAt(0,1,0);
+scene.add(new THREE.HemisphereLight(0x9ebcd6,0x182022,1.65));
+const key=new THREE.DirectionalLight(0xc9e0ff,3.2);key.position.set(-4,7,6);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-6,right:6,top:6,bottom:-6,near:.1,far:25});key.shadow.normalBias=.025;scene.add(key);
+const rim=new THREE.DirectionalLight(0xf0b881,2.7);rim.position.set(3,4,-5);scene.add(rim);
+const fill=new THREE.PointLight(0x8dd9e7,3.2,12,2);fill.position.set(0,2,5);scene.add(fill);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(25,25),new THREE.MeshStandardMaterial({color:0x263c4b,roughness:.43,metalness:.18}));floor.rotation.x=-Math.PI/2;floor.position.y=-.035;floor.receiveShadow=true;scene.add(floor);
+const actors=createActors(THREE),course=createCourseAssets(THREE),finishers=createElementFinishers(THREE,scene);
+const ichi=actors.createIchi();ichi.position.x=-1.35;ichi.rotation.y=Math.PI;scene.add(ichi);
+const oni=actors.createDemon(false,0);oni.position.x=1.35;oni.rotation.y=Math.PI;scene.add(oni);
+const shrine=course.makeObstacle('shrine');shrine.position.set(0,0,-3.2);shrine.scale.setScalar(1.45);scene.add(shrine);
+for(const side of [-1,1]){const rock=course.makeObstacle('rock');rock.position.set(side*3.8,0,-3.5);rock.scale.set(.7,.65,.7);scene.add(rock);}
+const names={lightning:'Lightning',water:'Water',fire:'Fire',wind:'Wind',darkness:'Darkness'};
+let selected='lightning',elapsed=0,nextStrike=Infinity,hideAt=Infinity,respawnAt=0,attackAt=-Infinity,last=0,frames=0,metricTime=0;
+function strike(school){attackAt=elapsed;selected=school;finishers.clear();oni.visible=true;finishers.spawn(school,oni.position.x,1.2,oni.position.z);hideAt=elapsed+.18;respawnAt=elapsed+1.35;nextStrike=elapsed+4;status.textContent=names[school]+' · effect playing';document.querySelectorAll('[data-school]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.school===school)));}
+document.querySelectorAll('[data-school]').forEach(button=>button.addEventListener('click',()=>strike(button.dataset.school)));
+document.getElementById('showModels').addEventListener('click',()=>{finishers.clear();oni.visible=true;attackAt=-Infinity;hideAt=Infinity;respawnAt=0;nextStrike=Infinity;status.textContent='Model view · choose a school to preview its effect';document.querySelectorAll('[data-school]').forEach(button=>button.setAttribute('aria-pressed','false'));});
+let drag=null,yaw=Math.atan2(4,7),pitch=Math.atan2(2,Math.sqrt(65)),radius=6.9;
+canvas.addEventListener('pointerdown',event=>{drag={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);});
+canvas.addEventListener('pointermove',event=>{if(!drag)return;yaw-=(event.clientX-drag.x)*.006;pitch=THREE.MathUtils.clamp(pitch+(event.clientY-drag.y)*.004,.06,1.15);drag={x:event.clientX,y:event.clientY};});
+canvas.addEventListener('wheel',event=>{event.preventDefault();radius=THREE.MathUtils.clamp(radius+event.deltaY*.006,3.8,11);},{passive:false});
+canvas.addEventListener('pointerup',()=>{drag=null;});canvas.addEventListener('pointercancel',()=>{drag=null;});
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.fov=innerWidth<600?52:43;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();
+renderer.setAnimationLoop(ms=>{const dt=last?Math.min((ms-last)/1000,.05):1/60;last=ms;elapsed+=dt;actors.animateIchi(ichi,{elapsed,speed:.12,jump:0,attack:Math.max(0,1-(elapsed-attackAt)/.42),lean:0,invincible:false,flip:0,slide:0});actors.animateDemon(oni,elapsed,false);if(elapsed>=nextStrike)strike(selected);if(elapsed>=hideAt){oni.visible=false;hideAt=Infinity;}if(respawnAt>0&&elapsed>=respawnAt){oni.visible=true;status.textContent=names[selected]+' · replays every 4 seconds';}finishers.update(dt,0);camera.position.set(Math.sin(yaw)*Math.cos(pitch)*radius,1+Math.sin(pitch)*radius,Math.cos(yaw)*Math.cos(pitch)*radius);camera.lookAt(0,1,0);renderer.render(scene,camera);frames++;metricTime+=dt;if(metricTime>=1){document.getElementById('metrics').textContent=Math.round(frames/metricTime)+' FPS · '+renderer.info.render.calls+' draw calls';frames=0;metricTime=0;}});
+</script>
+</body>
+</html>
